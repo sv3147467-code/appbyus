@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — AppByUs</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Segoe UI',sans-serif;background:#0a0a0f;color:#fff;min-height:100vh;}
+#login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
+#login-screen h2{font-size:24px;color:#a855f7;margin-bottom:20px;}
+#login-screen input{width:280px;padding:12px;border-radius:10px;border:1px solid #2a2a4a;background:#12121f;color:#fff;font-size:16px;margin-bottom:12px;outline:none;text-align:center;}
+#login-screen button{padding:12px 40px;border:none;border-radius:20px;background:linear-gradient(135deg,#a855f7,#6366f1);color:#fff;font-size:15px;font-weight:700;cursor:pointer;}
+#admin-panel{display:none;padding:16px;max-width:700px;margin:0 auto;}
+.admin-header{background:linear-gradient(135deg,#1a0533,#0d0d2b);padding:16px;border-radius:12px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;}
+.admin-header h1{font-size:20px;color:#a855f7;}
+.section-title{font-size:16px;font-weight:700;color:#a855f7;margin:20px 0 12px;border-bottom:1px solid #2a1a4a;padding-bottom:8px;}
+/* NOTICE */
+.notice-box{background:#12121f;border:1px solid #2a1a4a;border-radius:12px;padding:16px;margin-bottom:20px;}
+.notice-box textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #2a2a4a;background:#0a0a1a;color:#fff;font-size:14px;height:80px;resize:none;outline:none;margin-bottom:10px;}
+.notice-box input{width:100%;padding:10px;border-radius:8px;border:1px solid #2a2a4a;background:#0a0a1a;color:#fff;font-size:14px;outline:none;margin-bottom:10px;}
+.btn{padding:10px 20px;border:none;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;margin:3px;}
+.btn-purple{background:linear-gradient(135deg,#a855f7,#6366f1);color:#fff;}
+.btn-green{background:#06d6a0;color:#000;}
+.btn-red{background:#e63946;color:#fff;}
+.btn-gray{background:#1a1a2e;color:#aaa;border:1px solid #2a2a4a;}
+/* CARDS */
+.pending-card{background:#12121f;border:1px solid #4a1a1a;border-radius:12px;padding:16px;margin-bottom:10px;}
+.approved-card{background:#12121f;border:1px solid #2a1a4a;border-radius:12px;padding:16px;margin-bottom:10px;}
+.completed-card{background:#0d1a0d;border:1px solid #1a3a1a;border-radius:12px;padding:16px;margin-bottom:10px;}
+.card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+.card-text{font-size:14px;color:#e0e0e0;line-height:1.6;margin:8px 0;}
+.card-meta{font-size:12px;color:#666;}
+.card-actions{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;}
+.cat-badge{display:inline-block;background:#1a0533;color:#c084fc;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;}
+.votes{font-size:18px;font-weight:700;color:#ffd200;}
+.empty{text-align:center;padding:20px;color:#444;font-size:13px;}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;}
+.stat-box{background:#12121f;border:1px solid #2a1a4a;border-radius:10px;padding:12px;text-align:center;}
+.stat-num{font-size:24px;font-weight:700;color:#a855f7;}
+.stat-label{font-size:11px;color:#666;margin-top:3px;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <h2>🔐 Admin Access</h2>
+  <input type="password" id="pass-input" placeholder="Enter password" onkeydown="if(event.key==='Enter')checkPass()">
+  <button onclick="checkPass()">Login</button>
+</div>
+
+<!-- ADMIN PANEL -->
+<div id="admin-panel">
+  <div class="admin-header">
+    <h1>⚡ AppByUs Admin</h1>
+    <button class="btn btn-gray" onclick="logout()">Logout</button>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat-box"><div class="stat-num" id="stat-pending">0</div><div class="stat-label">Pending</div></div>
+    <div class="stat-box"><div class="stat-num" id="stat-approved">0</div><div class="stat-label">Live Ideas</div></div>
+    <div class="stat-box"><div class="stat-num" id="stat-done">0</div><div class="stat-label">Completed</div></div>
+  </div>
+
+  <!-- PIN NOTICE -->
+  <div class="section-title">📌 Pin a Notice</div>
+  <div class="notice-box">
+    <input type="text" id="notice-title" placeholder="Notice title (e.g. Week 1 Update!)">
+    <textarea id="notice-text" placeholder="Write your notice here... (updates, announcements, thank you messages)"></textarea>
+    <button class="btn btn-purple" onclick="pinNotice()">📌 Pin Notice</button>
+    <button class="btn btn-red" onclick="clearNotice()">🗑 Remove Notice</button>
+  </div>
+
+  <!-- PENDING -->
+  <div class="section-title">⏳ Pending Approval</div>
+  <div id="pending-list"></div>
+
+  <!-- APPROVED/LIVE -->
+  <div class="section-title">🔥 Live Ideas</div>
+  <div id="approved-list"></div>
+
+  <!-- COMPLETED -->
+  <div class="section-title">✅ Completed</div>
+  <div id="completed-list"></div>
+</div>
+
+<script>
+const PASS = 'AppByUs@2024';
+
+function checkPass(){
+  let p = document.getElementById('pass-input').value;
+  if(p === PASS){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('admin-panel').style.display='block';
+    loadAll();
+  } else {
+    alert('Wrong password!');
+  }
+}
+
+function logout(){
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('admin-panel').style.display='none';
+  document.getElementById('pass-input').value='';
+}
+
+function loadAll(){
+  renderStats();
+  renderPending();
+  renderApproved();
+  renderCompleted();
+  loadNotice();
+}
+
+function renderStats(){
+  let pending = JSON.parse(localStorage.getItem('appbyus-pending')||'[]');
+  let ideas = JSON.parse(localStorage.getItem('appbyus-ideas')||'[]');
+  let completed = JSON.parse(localStorage.getItem('appbyus-completed')||'[]');
+  document.getElementById('stat-pending').textContent = pending.length;
+  document.getElementById('stat-approved').textContent = ideas.length;
+  document.getElementById('stat-done').textContent = completed.length;
+}
+
+// NOTICE
+function pinNotice(){
+  let title = document.getElementById('notice-title').value.trim();
+  let text = document.getElementById('notice-text').value.trim();
+  if(!text){alert('Write something!');return;}
+  let notice = {title, text, date: new Date().toLocaleDateString()};
+  localStorage.setItem('appbyus-notice', JSON.stringify(notice));
+  alert('Notice pinned! ✅');
+}
+function clearNotice(){
+  localStorage.removeItem('appbyus-notice');
+  document.getElementById('notice-title').value='';
+  document.getElementById('notice-text').value='';
+  alert('Notice removed!');
+}
+function loadNotice(){
+  let n = JSON.parse(localStorage.getItem('appbyus-notice')||'null');
+  if(n){
+    document.getElementById('notice-title').value = n.title||'';
+    document.getElementById('notice-text').value = n.text||'';
+  }
+}
+
+// PENDING
+function renderPending(){
+  let pending = JSON.parse(localStorage.getItem('appbyus-pending')||'[]');
+  let html = '';
+  if(!pending.length) html = '<div class="empty">No pending ideas 🎉</div>';
+  else pending.forEach((p,i)=>{
+    html += `
+    <div class="pending-card">
+      <div class="card-top">
+        <span class="cat-badge">${p.category}</span>
+        <span class="card-meta">${p.name} · ${p.time}</span>
+      </div>
+      <div class="card-text">${p.text}</div>
+      <div class="card-actions">
+        <button class="btn btn-green" onclick="approve(${i})">✅ Approve</button>
+        <button class="btn btn-red" onclick="deletePending(${i})">🗑 Delete</button>
+      </div>
+    </div>`;
+  });
+  document.getElementById('pending-list').innerHTML = html;
+}
+
+function approve(i){
+  let pending = JSON.parse(localStorage.getItem('appbyus-pending')||'[]');
+  let ideas = JSON.parse(localStorage.getItem('appbyus-ideas')||'[]');
+  ideas.push(pending[i]);
+  pending.splice(i,1);
+  localStorage.setItem('appbyus-pending', JSON.stringify(pending));
+  localStorage.setItem('appbyus-ideas', JSON.stringify(ideas));
+  loadAll();
+}
+
+function deletePending(i){
+  let pending = JSON.parse(localStorage.getItem('appbyus-pending')||'[]');
+  pending.splice(i,1);
+  localStorage.setItem('appbyus-pending', JSON.stringify(pending));
+  loadAll();
+}
+
+// APPROVED
+function renderApproved(){
+  let ideas = JSON.parse(localStorage.getItem('appbyus-ideas')||'[]');
+  let sorted = [...ideas].sort((a,b)=>b.votes-a.votes);
+  let html = '';
+  if(!sorted.length) html = '<div class="empty">No live ideas yet</div>';
+  else sorted.forEach((idea,i)=>{
+    html += `
+    <div class="approved-card">
+      <div class="card-top">
+        <span class="cat-badge">${idea.category}</span>
+        <span class="votes">▲ ${idea.votes}</span>
+      </div>
+      <div class="card-text">${idea.text}</div>
+      <div class="card-meta">${idea.name} · ${idea.time}</div>
+      <div class="card-actions">
+        <button class="btn btn-green" onclick="markDone(${idea.id})">✅ Mark Complete</button>
+        <button class="btn btn-red" onclick="deleteIdea(${idea.id})">🗑 Delete</button>
+      </div>
+    </div>`;
+  });
+  document.getElementById('approved-list').innerHTML = html;
+}
+
+function markDone(id){
+  let ideas = JSON.parse(localStorage.getItem('appbyus-ideas')||'[]');
+  let completed = JSON.parse(localStorage.getItem('appbyus-completed')||'[]');
+  let idx = ideas.findIndex(i=>i.id===id);
+  if(idx>=0){
+    ideas[idx].doneDate = new Date().toLocaleDateString();
+    completed.push(ideas[idx]);
+    ideas.splice(idx,1);
+    localStorage.setItem('appbyus-ideas', JSON.stringify(ideas));
+    localStorage.setItem('appbyus-completed', JSON.stringify(completed));
+    loadAll();
+  }
+}
+
+function deleteIdea(id){
+  let ideas = JSON.parse(localStorage.getItem('appbyus-ideas')||'[]');
+  ideas = ideas.filter(i=>i.id!==id);
+  localStorage.setItem('appbyus-ideas', JSON.stringify(ideas));
+  loadAll();
+}
+
+// COMPLETED
+function renderCompleted(){
+  let completed = JSON.parse(localStorage.getItem('appbyus-completed')||'[]');
+  let html = '';
+  if(!completed.length) html = '<div class="empty">Nothing completed yet!</div>';
+  else completed.forEach((c,i)=>{
+    html += `
+    <div class="completed-card">
+      <div class="card-top">
+        <span class="cat-badge">${c.category}</span>
+        <span style="color:#4ade80;font-size:12px;">✅ Done ${c.doneDate}</span>
+      </div>
+      <div class="card-text" style="color:#4ade80;">${c.text}</div>
+      <div class="card-meta">${c.name}</div>
+      <div class="card-actions">
+        <button class="btn btn-red" onclick="deleteCompleted(${i})">🗑 Remove</button>
+      </div>
+    </div>`;
+  });
+  document.getElementById('completed-list').innerHTML = html;
+}
+
+function deleteCompleted(i){
+  let completed = JSON.parse(localStorage.getItem('appbyus-completed')||'[]');
+  completed.splice(i,1);
+  localStorage.setItem('appbyus-completed', JSON.stringify(completed));
+  loadAll();
+}
+</script>
+</body>
+                                                                        </html>
