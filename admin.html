@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — AppByUs</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Segoe UI',sans-serif;background:#0a0a0f;color:#fff;min-height:100vh;}
+#login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
+#login-screen h2{font-size:24px;color:#a855f7;margin-bottom:20px;}
+#login-screen input{width:280px;padding:12px;border-radius:10px;border:1px solid #2a2a4a;background:#12121f;color:#fff;font-size:16px;margin-bottom:12px;outline:none;text-align:center;}
+#login-screen button{padding:12px 40px;border:none;border-radius:20px;background:linear-gradient(135deg,#a855f7,#6366f1);color:#fff;font-size:15px;font-weight:700;cursor:pointer;}
+#admin-panel{display:none;padding:16px;max-width:700px;margin:0 auto;}
+.admin-header{background:linear-gradient(135deg,#1a0533,#0d0d2b);padding:16px;border-radius:12px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;}
+.admin-header h1{font-size:20px;color:#a855f7;}
+.section-title{font-size:16px;font-weight:700;color:#a855f7;margin:20px 0 12px;border-bottom:1px solid #2a1a4a;padding-bottom:8px;}
+.notice-box{background:#12121f;border:1px solid #2a1a4a;border-radius:12px;padding:16px;margin-bottom:20px;}
+.notice-box textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #2a2a4a;background:#0a0a1a;color:#fff;font-size:14px;height:80px;resize:none;outline:none;margin-bottom:10px;}
+.notice-box input{width:100%;padding:10px;border-radius:8px;border:1px solid #2a2a4a;background:#0a0a1a;color:#fff;font-size:14px;outline:none;margin-bottom:10px;}
+.btn{padding:10px 20px;border:none;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;margin:3px;}
+.btn-purple{background:linear-gradient(135deg,#a855f7,#6366f1);color:#fff;}
+.btn-green{background:#06d6a0;color:#000;}
+.btn-red{background:#e63946;color:#fff;}
+.btn-gray{background:#1a1a2e;color:#aaa;border:1px solid #2a2a4a;}
+.card{background:#12121f;border-radius:12px;padding:16px;margin-bottom:10px;}
+.pending-card{border:1px solid #4a1a1a;}
+.approved-card{border:1px solid #2a1a4a;}
+.done-card{background:#0d1a0d;border:1px solid #1a3a1a;}
+.card-text{font-size:14px;color:#e0e0e0;line-height:1.6;margin:8px 0;}
+.card-meta{font-size:12px;color:#666;}
+.card-actions{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;}
+.cat-badge{display:inline-block;background:#1a0533;color:#c084fc;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;}
+.votes{font-size:18px;font-weight:700;color:#ffd200;}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;}
+.stat-box{background:#12121f;border:1px solid #2a1a4a;border-radius:10px;padding:12px;text-align:center;}
+.stat-num{font-size:24px;font-weight:700;color:#a855f7;}
+.stat-label{font-size:11px;color:#666;margin-top:3px;}
+.empty{text-align:center;padding:20px;color:#444;font-size:13px;}
+.loading{text-align:center;padding:20px;color:#a855f7;font-size:13px;}
+.success-msg{background:#0a2a0a;border:1px solid #1a7a1a;border-radius:10px;padding:10px;color:#4ade80;font-size:13px;margin:10px 0;display:none;text-align:center;}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <h2>🔐 Admin Access</h2>
+  <input type="password" id="pass-input" placeholder="Enter password" onkeydown="if(event.key==='Enter')checkPass()">
+  <button onclick="checkPass()">Login</button>
+</div>
+
+<div id="admin-panel">
+  <div class="admin-header">
+    <h1>⚡ AppByUs Admin</h1>
+    <button class="btn btn-gray" onclick="logout()">Logout</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat-box"><div class="stat-num" id="stat-pending">0</div><div class="stat-label">Pending</div></div>
+    <div class="stat-box"><div class="stat-num" id="stat-approved">0</div><div class="stat-label">Live Ideas</div></div>
+    <div class="stat-box"><div class="stat-num" id="stat-done">0</div><div class="stat-label">Completed</div></div>
+  </div>
+
+  <div class="section-title">📌 Pin a Notice</div>
+  <div class="notice-box">
+    <input type="text" id="notice-title" placeholder="Notice title (e.g. Week 1 Update!)">
+    <textarea id="notice-text" placeholder="Write your notice here..."></textarea>
+    <div class="success-msg" id="notice-success">✅ Notice pinned! Visible to all users!</div>
+    <button class="btn btn-purple" onclick="pinNotice()">📌 Pin Notice</button>
+    <button class="btn btn-red" onclick="clearNotice()">🗑 Remove Notice</button>
+  </div>
+
+  <div class="section-title">⏳ Pending Approval</div>
+  <div id="pending-list"><div class="loading">Loading...</div></div>
+
+  <div class="section-title">🔥 Live Ideas</div>
+  <div id="approved-list"><div class="loading">Loading...</div></div>
+
+  <div class="section-title">✅ Completed</div>
+  <div id="completed-list"><div class="loading">Loading...</div></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, setDoc, getDoc, onSnapshot, orderBy, query } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCVEEQ6ZSV5qjgiB6S2LT7KZekXS7MWxHI",
+  authDomain: "appbyus-259ff.firebaseapp.com",
+  projectId: "appbyus-259ff",
+  storageBucket: "appbyus-259ff.firebasestorage.app",
+  messagingSenderId: "952433669615",
+  appId: "1:952433669615:web:28d9340a9cf44f282ab21a"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const PASS = 'AppByUs@2024';
+
+window.checkPass = function(){
+  if(document.getElementById('pass-input').value === PASS){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('admin-panel').style.display='block';
+    loadAll();
+  } else {
+    document.getElementById('pass-input').value='';
+    document.getElementById('pass-input').placeholder='Wrong password!';
+  }
+};
+
+window.logout = function(){
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('admin-panel').style.display='none';
+  document.getElementById('pass-input').value='';
+};
+
+function loadAll(){
+  loadPending();
+  loadApproved();
+  loadCompleted();
+  loadNoticeAdmin();
+}
+
+// NOTICE
+async function loadNoticeAdmin(){
+  try{
+    let snap = await getDoc(doc(db,'settings','notice'));
+    if(snap.exists()){
+      document.getElementById('notice-title').value = snap.data().title||'';
+      document.getElementById('notice-text').value = snap.data().text||'';
+    }
+  }catch(e){}
+}
+
+window.pinNotice = async function(){
+  let title = document.getElementById('notice-title').value.trim();
+  let text = document.getElementById('notice-text').value.trim();
+  if(!text){ return; }
+  await setDoc(doc(db,'settings','notice'), {title, text, date: new Date().toLocaleDateString()});
+  document.getElementById('notice-success').style.display='block';
+  setTimeout(()=>document.getElementById('notice-success').style.display='none',3000);
+};
+
+window.clearNotice = async function(){
+  await setDoc(doc(db,'settings','notice'), {title:'', text:'', date:''});
+  document.getElementById('notice-title').value='';
+  document.getElementById('notice-text').value='';
+};
+
+// PENDING
+function loadPending(){
+  onSnapshot(collection(db,'pending'), snap=>{
+    let items = snap.docs.map(d=>({id:d.id,...d.data()}));
+    document.getElementById('stat-pending').textContent = items.length;
+    let html = '';
+    if(!items.length) html='<div class="empty">No pending ideas 🎉</div>';
+    else items.forEach(p=>{
+      html+=`<div class="card pending-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="cat-badge">${p.category}</span>
+          <span class="card-meta">${p.name} · ${p.time}</span>
+        </div>
+        <div class="card-text">${p.text}</div>
+        <div class="card-actions">
+          <button class="btn btn-green" onclick="window.approveidea('${p.id}')">✅ Approve</button>
+          <button class="btn btn-red" onclick="window.deletePending('${p.id}')">🗑 Delete</button>
+        </div>
+      </div>`;
+    });
+    document.getElementById('pending-list').innerHTML = html;
+  });
+}
+
+window.approveidea = async function(id){
+  let snap = await getDoc(doc(db,'pending',id));
+  if(snap.exists()){
+    await addDoc(collection(db,'ideas'), {...snap.data(), votes:0});
+    await deleteDoc(doc(db,'pending',id));
+  }
+};
+
+window.deletePending = async function(id){
+  await deleteDoc(doc(db,'pending',id));
+};
+
+// APPROVED
+function loadApproved(){
+  onSnapshot(query(collection(db,'ideas'),orderBy('votes','desc')), snap=>{
+    let items = snap.docs.map(d=>({id:d.id,...d.data()}));
+    document.getElementById('stat-approved').textContent = items.length;
+    let html = '';
+    if(!items.length) html='<div class="empty">No live ideas yet</div>';
+    else items.forEach(idea=>{
+      html+=`<div class="card approved-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="cat-badge">${idea.category}</span>
+          <span class="votes">▲ ${idea.votes}</span>
+        </div>
+        <div class="card-text">${idea.text}</div>
+        <div class="card-meta">${idea.name} · ${idea.time}</div>
+        <div class="card-actions">
+          <button class="btn btn-green" onclick="window.markDone('${idea.id}')">✅ Mark Complete</button>
+          <button class="btn btn-red" onclick="window.deleteIdea('${idea.id}')">🗑 Delete</button>
+        </div>
+      </div>`;
+    });
+    document.getElementById('approved-list').innerHTML = html;
+  });
+}
+
+window.markDone = async function(id){
+  let snap = await getDoc(doc(db,'ideas',id));
+  if(snap.exists()){
+    await addDoc(collection(db,'completed'), {...snap.data(), doneDate: new Date().toLocaleDateString()});
+    await deleteDoc(doc(db,'ideas',id));
+  }
+};
+
+window.deleteIdea = async function(id){
+  await deleteDoc(doc(db,'ideas',id));
+};
+
+// COMPLETED
+function loadCompleted(){
+  onSnapshot(collection(db,'completed'), snap=>{
+    let items = snap.docs.map(d=>({id:d.id,...d.data()}));
+    document.getElementById('stat-done').textContent = items.length;
+    let html = '';
+    if(!items.length) html='<div class="empty">Nothing completed yet!</div>';
+    else items.forEach(c=>{
+      html+=`<div class="card done-card">
+        <div style="display:flex;justify-content:space-between;">
+          <span class="cat-badge">${c.category}</span>
+          <span style="color:#4ade80;font-size:12px;">✅ ${c.doneDate}</span>
+        </div>
+        <div class="card-text" style="color:#4ade80;">${c.text}</div>
+        <div class="card-meta">${c.name}</div>
+        <div class="card-actions">
+          <button class="btn btn-red" onclick="window.deleteCompleted('${c.id}')">🗑 Remove</button>
+        </div>
+      </div>`;
+    });
+    document.getElementById('completed-list').innerHTML = html;
+  });
+}
+
+window.deleteCompleted = async function(id){
+  await deleteDoc(doc(db,'completed',id));
+};
+</script>
+</body>
+                                                                         </html>
